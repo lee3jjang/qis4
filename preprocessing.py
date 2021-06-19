@@ -1,12 +1,44 @@
 import numpy as np
 import pandas as pd
 
+def clsf_crd_grd(data: pd.DataFrame, reins_crd_grd: pd.DataFrame) -> pd.Series:
+    """CRD_GRD 가공
+
+    Args:
+        data (pd.DataFrame): 일반 출재, 계약/보상 기초데이터
+        reins_crd_grd (pd.DataFrame): 재보험자별 신용등급
+
+    Raises:
+        Exception: [description]
+        Exception: [description]
+
+    Returns:
+        pd.Series: CRD_GRD 결과
+
+    Example:
+        일반_출재_미경과보험료 = pd.read_excel(FILE_PATH / '일반_출재_미경과보험료.xlsx', dtype={'RRNR_DAT_DVCD': str, 'RRNR_CTC_BZ_DVCD': str, 'ARC_INPL_CD': str, 'T02_RN_RINSC_CD': str})
+        재보험자_국내신용등급 = pd.read_excel(FILE_PATH / '재보험자_국내신용등급.xlsx', dtype={'재보험사코드': str}) \
+            .rename(columns = {'재보험사코드': 'T02_RN_RINSC_CD', '국내신용등급': 'CRD_GRD'})
+        일반_출재_미경과보험료['CRD_GRD'] = clsf_crd_grd(일반_출재_미경과보험료, 재보험자_국내신용등급)
+    """
+
+    # 컬럼 존재성 검사
+    if not set(['T02_RN_RINSC_CD']).issubset(data.columns):
+        raise Exception('data 필수 컬럼 누락 오류')
+    if not set(['T02_RN_RINSC_CD', 'CRD_GRD']).issubset(reins_crd_grd.columns):
+        raise Exception('reins_crd_grd 필수 컬럼 누락 오류')
+
+    crd_grd = data.merge(reins_crd_grd, on='T02_RN_RINSC_CD', how='left') \
+        .assign(CRD_GRD = lambda x: x['CRD_GRD'].fillna('무등급'))
+
+    return crd_grd['CRD_GRD']
+
 def clsf_rrnr_dvcd(data: pd.DataFrame, ret_type: str) -> pd.Series:
-    """[summary]
+    """RRNR_DVCD 가공
 
     Args:
         data (pd.DataFrame): 일반 원수/출재, 계약/보상 기초데이터
-        ret_type (str): 원수 또는 출재
+        ret_type (str): "원수" 또는 "출재"
 
     Raises:
         Exception: [description]
