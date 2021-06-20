@@ -318,7 +318,7 @@ def clsf_boz_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
     }
 
     # 컬럼 존재성 검사
-    if not set(['ARC_INPL_CD', 'NTNL_CTRY_CD']).issubset(data.columns):
+    if not set(['ARC_INPL_CD', 'DMFR_DVCD']).issubset(data.columns):
         raise Exception('data 필수 컬럼 누락 오류')
     if not set(['PDC_CD', 'PDGR_CD']).issubset(prd_info.columns):
         raise Exception('prd_info 필수 컬럼 누락 오류')
@@ -331,8 +331,8 @@ def clsf_boz_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
         .assign(BOZ_CD = lambda x: x['PDGR_CD'].map(lambda y: pdgr_boz_mapper.get(y, '#'))) \
         .assign(BOZ_CD = lambda x: np.where(x['PDC_CD'] == '10607', 'A008', x['BOZ_CD'])) \
         .assign(BOZ_CD = lambda x: np.where(x['PDGR_CD'] == '30', 'A010', x['BOZ_CD'])) \
-        .assign(BOZ_CD = lambda x: np.where(x['PDC_CD'].isin(['10902', '10903']) & (x.NTNL_CTRY_CD == 'KR'), 'A009', x['BOZ_CD'])) \
-        .assign(BOZ_CD = lambda x: np.where(x['PDC_CD'].isin(['10902', '10903']) & (x.NTNL_CTRY_CD != 'KR'), 'A010', x['BOZ_CD'])) \
+        .assign(BOZ_CD = lambda x: np.where(x['PDC_CD'].isin(['10902', '10903']) & (x.DMFR_DVCD == '01'), 'A009', x['BOZ_CD'])) \
+        .assign(BOZ_CD = lambda x: np.where(x['PDC_CD'].isin(['10902', '10903']) & (x.DMFR_DVCD != '01'), 'A010', x['BOZ_CD'])) \
         .assign(BOZ_CD = lambda x: np.where(x.PDC_CD.isin(['10011', '10013', '10016', '10017', '10900', '10901']), 'A003', x['BOZ_CD']))
 
     ## 아래코드 삭제예정(임시) ##
