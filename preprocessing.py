@@ -1,5 +1,32 @@
 import numpy as np
 import pandas as pd
+from typing import Tuple
+
+def get_cf(cf: pd.DataFrame, pdgr_cd: str, cf_type: str) -> Tuple[pd.Series, pd.Series]:
+    n = 7 if pdgr_cd in ['25', '26'] else 5
+    if not set(['AY_YM', 'BASE_1', 'BASE_2', 'BASE_3', 'BASE_4', 'BASE_5', 'BASE_6', 'BASE_7']).issubset(cf.columns):
+        raise Exception('cf 필수 컬럼 누락 오류')
+
+    if len(cf) != n:
+        raise Exception('cf 입력 크기 오류')
+
+    cf_arr = cf.sort_values(by='AY_YM')[['BASE_1', 'BASE_2', 'BASE_3', 'BASE_4', 'BASE_5', 'BASE_6', 'BASE_7']].to_numpy()
+
+    pay_cf_all = []
+    for i in range(n-1, 0, -1):
+        pay_cf = 0
+        for j in range(i):
+            pay_cf += cf_arr[(n-1)-j, (n-1-i)+j+1]-cf_arr[(n-1)-j, (n-1-i)+j]
+        pay_cf = max(pay_cf, 0)
+        pay_cf_all.append(pay_cf)
+    pay_cf_all = np.array(pay_cf_all)
+    pay_cf_rate = pd.Series(pay_cf_all/pay_cf_all.sum())
+    
+    if cf_type == '보험금':
+        cf_t = pd.Series(np.arange(0.5, n-0.5))
+        return (cf_t, pay_cf_rate)
+
+
 
 def clsf_crd_grd(data: pd.DataFrame, reins_crd_grd: pd.DataFrame) -> pd.Series:
     """CRD_GRD 가공
