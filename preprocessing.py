@@ -3,6 +3,53 @@ import pandas as pd
 from typing import Tuple
 
 
+def clsf_cntr_catg_cd(data: pd.DataFrame, cntr_grp_info: pd.DataFrame) -> pd.Series:
+    """CNTR_CATG_CD 가공
+
+    Args:
+        data (pd.DataFrame): 일반 원수/출재, 계약/보상 기초데이터
+        cntr_grp_info (pd.DataFrame): 국가그룹정보
+
+    Raises:
+        Exception: [description]
+        Exception: [description]
+        Exception: [description]
+        Exception: [description]
+
+    Returns:
+        pd.Series: CNTR_CATG_CD 결과
+
+    Example:
+        >>> 일반_원수_미경과보험료 = pd.read_excel(FILE_PATH / '일반_원수_미경과보험료.xlsx', dtype={'RRNR_DAT_DVCD': str, 'RRNR_CTC_BZ_DVCD': str, 'ARC_INPL_CD': str})
+        >>> 국가그룹 = pd.read_excel(FILE_PATH / '국가그룹.xlsx', dtype={'CNTR_CATG_CD': str})
+        >>> 일반_원수_미경과보험료['RRNR_DVCD'] = clsf_rrnr_dvcd(일반_원수_미경과보험료_가공, '원수')
+        >>> 일반_원수_미경과보험료['DMFR_DVCD'] = clsf_dmfr_dvcd(일반_원수_미경과보험료)
+        >>> 일반_원수_미경과보험료['CNTR_CATG_CD'] = clsf_cntr_catg_cd(일반_원수_미경과보험료, 국가그룹)
+    """
+
+    # 컬럼 존재성 검사
+    if not set(['NTNL_CTRY_CD', 'ARC_INPL_CD', 'DMFR_DVCD']).issubset(data.columns):
+        raise Exception('data 필수 컬럼 누락 오류')
+    if not set(['CNTR_CD', 'CNTR_CATG_CD']).issubset(cntr_grp_info.columns):
+        raise Exception('cntr_grp_info 필수 컬럼 누락 오류')
+    if not cntr_grp_info['CNTR_CD'].is_unique:
+        raise Exception('CNTR_CD 유일성 오류')
+    if set(['CNTR_CD', 'CNTR_CATG_CD']).issubset(data.columns):
+        data.drop(['CNTR_CD', 'CNTR_CATG_CD'], axis=1, inplace=True)
+
+    catr_catg_cd = data \
+        .merge(cntr_grp_info, left_on='NTNL_CTRY_CD', right_on='CNTR_CD', how='left') \
+        .assign(CNTR_CATG_CD = lambda x: x['CNTR_CATG_CD'].fillna('#')) \
+        .assign(CNTR_CATG_CD = lambda x: np.where(x['DMFR_DVCD'] == '01', '01', np.where(x['ARC_INPL_CD'].str.slice(0,5)=='10900', '04', x['CNTR_CATG_CD'])))
+    
+    # 전처리 누락여부 검사
+    if len(catr_catg_cd.query('CNTR_CATG_CD == "#"')) != 0:
+        print(catr_catg_cd.query('CNTR_CATG_CD == "#"'))
+        raise Exception('전처리 누락 오류')
+
+    return catr_catg_cd['CNTR_CATG_CD']
+
+
 def get_loss_adj(cf_t: pd.Series, cf_rate: pd.Series, crd_grd: str, int_rate: pd.DataFrame, fwd_pd: pd.DataFrame) -> float:
     """손실조정율 계산
 
