@@ -2,15 +2,37 @@ import numpy as np
 import pandas as pd
 from typing import Tuple
 
+
 def get_cf(cf: pd.DataFrame, pdgr_cd: str, cf_type: str) -> Tuple[pd.Series, pd.Series]:
+    """보험금/보험료 현금흐름비중 계산
+
+    Args:
+        cf (pd.DataFrame): 보험금 진전추이
+        pdgr_cd (str): 상품군코드
+        cf_type (str): "보험금" 또는 "보험료"
+
+    Raises:
+        Exception: [description]
+        Exception: [description]
+        Exception: [description]
+
+    Returns:
+        Tuple[pd.Series, pd.Series]: (지급시점, 현금흐름비중)
+
+    Example:
+        일반_보험금진전추이 = pd.read_excel('data/현행추정부채_일반/일반_보험금진전추이.xlsx')
+        pdgr_cd = '26'
+        cf_type = '보험료'
+        cf_t, cf = get_cf(일반_보험금진전추이.query('PDGR_CD == @pdgr_cd'), pdgr_cd, cf_type)
+    """
     n = 7 if pdgr_cd in ['25', '26'] else 5
-    if not set(['AY_YM', 'BASE_1', 'BASE_2', 'BASE_3', 'BASE_4', 'BASE_5', 'BASE_6', 'BASE_7']).issubset(cf.columns):
+    if not set(['AY', 'BASE_1', 'BASE_2', 'BASE_3', 'BASE_4', 'BASE_5', 'BASE_6', 'BASE_7']).issubset(cf.columns):
         raise Exception('cf 필수 컬럼 누락 오류')
 
     if len(cf) != n:
         raise Exception('cf 입력 크기 오류')
 
-    cf_arr = cf.sort_values(by='AY_YM')[['BASE_1', 'BASE_2', 'BASE_3', 'BASE_4', 'BASE_5', 'BASE_6', 'BASE_7']].to_numpy()
+    cf_arr = cf.sort_values(by='AY')[['BASE_1', 'BASE_2', 'BASE_3', 'BASE_4', 'BASE_5', 'BASE_6', 'BASE_7']].to_numpy()
 
     pay_cf_all = []
     for i in range(n-1, 0, -1):
@@ -23,9 +45,24 @@ def get_cf(cf: pd.DataFrame, pdgr_cd: str, cf_type: str) -> Tuple[pd.Series, pd.
     pay_cf_rate = pd.Series(pay_cf_all/pay_cf_all.sum())
     
     if cf_type == '보험금':
-        cf_t = pd.Series(np.arange(0.5, n-0.5))
+        cf_t = pd.Series(np.arange(n-1)+0.5)
         return (cf_t, pay_cf_rate)
+    elif cf_type == '보험료':
+        cf_t = pd.Series(np.arange(n-1)+0.2929)
+        pay_cf_cum_rate = pay_cf_rate.cumsum()
+        one_minus_adj_rate = np.zeros(n-1)
+        adj_rate = np.zeros(n-1)
+        for i in range(n-2):
+            adj_rate[i] = pay_cf_cum_rate[i]+0.2071*(pay_cf_cum_rate[i+1]-pay_cf_cum_rate[i])
+        adj_rate[-1] = 1
+        one_minus_adj_rate[0] = adj_rate[0]
+        for i in range(1, n-1):
+            one_minus_adj_rate[i] = adj_rate[i]-adj_rate[i-1]
+        one_minus_adj_rate = pd.Series(one_minus_adj_rate)
+        return (cf_t, one_minus_adj_rate)
 
+    else:
+        raise Exception('cf_type 입력 오류')
 
 
 def clsf_crd_grd(data: pd.DataFrame, reins_crd_grd: pd.DataFrame) -> pd.Series:
@@ -127,6 +164,48 @@ def clsf_dmfr_dvcd(data: pd.DataFrame) -> pd.Series:
     return dmfr_dvcd['DMFR_DVCD']
 
 
+def clsf_pdgr_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
+    """PDGR_CD 가공 (원래 PDGR_CD랑 조금 다름)
+
+    Args:
+        data (pd.DataFrame): 일반 원수/출재, 계약/보상 기초데이터
+        prd_info (pd.DataFrame): 상품정보
+
+    Returns:
+        pd.Series: BOZ_CD 결과
+
+    Example:
+        >>> 일반_상품정보 = pd.read_excel(FILE_PATH / '일반_상품정보.xlsx', dtype={'PDC_CD': str, 'PDGR_CD': str})
+        >>> 일반_원수_미경과보험료 = pd.read_excel(FILE_PATH / '일반_원수_미경과보험료.xlsx', dtype={'RRNR_DAT_DVCD': str, 'RRNR_CTC_BZ_DVCD': str, 'ARC_INPL_CD': str})
+        >>> 일반_원수_미경과보험료['PDGR_CD'] = clsf_pdgr_cd(일반_원수_미경과보험료, 일반_상품정보)
+    """
+    # 컬럼 존재성 검사
+    if not set(['ARC_INPL_CD']).issubset(data.columns):
+        raise Exception('data 필수 컬럼 누락 오류')
+    if not set(['PDC_CD', 'PDGR_CD']).issubset(prd_info.columns):
+        raise Exception('prd_info 필수 컬럼 누락 오류')
+    if set(['PDGR_CD']).issubset(data.columns):
+        data.drop('PDGR_CD', axis=1, inplace=True)
+
+    pdgr_cd = data \
+        .assign(PDC_CD = lambda x: x['ARC_INPL_CD'].str.slice(0,5)) \
+        .merge(prd_info, on='PDC_CD', how='left') \
+        .assign(PDGR_CD = lambda x: x['PDGR_CD'].fillna('#')) \
+        .assign(PDGR_CD = lambda x: np.where(x['PDGR_CD'] == '34', '29', x['PDGR_CD'])) \
+        .assign(PDGR_CD = lambda x: np.where(x.PDC_CD.isin(['10011', '10013', '10016', '10017', '10900', '10901']), '27', x['PDGR_CD']))
+
+    ## 아래코드 삭제예정(임시) ##
+    pdgr_cd = pdgr_cd.assign(PDGR_CD = lambda x: np.where(x.PDC_CD.isin([
+        '13411', '13414', '13415', '13418', '13413', '13416',
+        '13814', '13412', '13512', '13606', '13409', '13510']), '29', x['PDGR_CD']))
+
+    # 전처리 누락여부 검사
+    if len(pdgr_cd.query('PDGR_CD == "#"')) != 0:
+        print(pdgr_cd.query('PDGR_CD == "#"'))
+        raise Exception('전처리 누락 오류')
+
+    return pdgr_cd['PDGR_CD']
+
 def clsf_boz_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
     """BOZ_CD 가공
 
@@ -160,7 +239,7 @@ def clsf_boz_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
         .assign(PDC_CD = lambda x: x['ARC_INPL_CD'].str.slice(0,5)) \
         .merge(prd_info, on='PDC_CD', how='left') \
         .assign(BOZ_CD = lambda x: x['PDGR_CD'].map(lambda y: pdgr_boz_mapper.get(y, '#'))) \
-        .assign(BOZ_CD = lambda x: np.where(x['PDC_CD'] =='10607', 'A008', x['BOZ_CD'])) \
+        .assign(BOZ_CD = lambda x: np.where(x['PDC_CD'] == '10607', 'A008', x['BOZ_CD'])) \
         .assign(BOZ_CD = lambda x: np.where(x['PDGR_CD'] == '30', 'A010', x['BOZ_CD'])) \
         .assign(BOZ_CD = lambda x: np.where(x['PDC_CD'].isin(['10902', '10903']) & (x.NTNL_CTRY_CD == 'KR'), 'A009', x['BOZ_CD'])) \
         .assign(BOZ_CD = lambda x: np.where(x['PDC_CD'].isin(['10902', '10903']) & (x.NTNL_CTRY_CD != 'KR'), 'A010', x['BOZ_CD'])) \
@@ -173,11 +252,16 @@ def clsf_boz_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
 
     # 전처리 누락여부 검사
     if len(boz_cd.query('BOZ_CD == "#"')) != 0:
-        print(boz_cd)
+        print(boz_cd.query('BOZ_CD == "#"'))
         raise Exception('전처리 누락 오류')
 
     return boz_cd['BOZ_CD']
 
 
 if __name__ == '__main__':
-    pass
+    import pandas as pd
+    from pathlib import Path
+    FILE_PATH = Path('./data/현행추정부채_일반')
+    일반_상품정보 = pd.read_excel(FILE_PATH / '일반_상품정보.xlsx', dtype={'PDC_CD': str, 'PDGR_CD': str})
+    일반_원수_미경과보험료 = pd.read_excel(FILE_PATH / '일반_원수_미경과보험료.xlsx', dtype={'RRNR_DAT_DVCD': str, 'RRNR_CTC_BZ_DVCD': str, 'ARC_INPL_CD': str})
+    일반_원수_미경과보험료['PDGR_CD'] = clsf_pdgr_cd(일반_원수_미경과보험료, 일반_상품정보)
