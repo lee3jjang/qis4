@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from typing import Tuple
 
+
 def get_disc_factor(cf_t: pd.Series, cf_rate: pd.Series, int_rate: pd.DataFrame) -> float:
     """할인요소계산
 
@@ -135,6 +136,7 @@ def clsf_crd_grd(data: pd.DataFrame, reins_crd_grd: pd.DataFrame) -> pd.Series:
 
     return crd_grd['CRD_GRD']
 
+
 def clsf_rrnr_dvcd(data: pd.DataFrame, ret_type: str) -> pd.Series:
     """RRNR_DVCD 가공
 
@@ -243,6 +245,7 @@ def clsf_pdgr_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
         raise Exception('전처리 누락 오류')
 
     return pdgr_cd['PDGR_CD']
+
 
 def clsf_boz_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
     """BOZ_CD 가공
