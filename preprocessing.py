@@ -29,6 +29,8 @@ def get_loss_adj(cf_t: pd.Series, cf_rate: pd.Series, crd_grd: str, int_rate: pd
     # 컬럼 존재성 검사
     if not set(['MAT_TERM', 'SPOT_RATE']).issubset(int_rate.columns):
         raise Exception('int_rate 필수 컬럼 누락 오류')
+    if not set(['GRADE', 'YEAR', 'FWD_PD']).issubset(fwd_pd.columns):
+        raise Exception('fwd_pd 필수 컬럼 누락 오류')
     if not int_rate['MAT_TERM'].is_unique:
         raise Exception('MAT_TERM 유일성 오류')
     if not fwd_pd.query('GRADE == @crd_grd')['YEAR'].is_unique:
