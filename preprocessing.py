@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from typing import Tuple
 
+
 def get_loss_adj(cf_t: pd.Series, cf_rate: pd.Series, crd_grd: str, int_rate: pd.DataFrame, fwd_pd: pd.DataFrame) -> float:
     """손실조정율 계산
 
@@ -48,6 +49,34 @@ def get_loss_adj(cf_t: pd.Series, cf_rate: pd.Series, crd_grd: str, int_rate: pd
     loss = lgd*cf_rate[::-1].cumsum()[::-1]
     loss_adj = np.sum(loss*fwd_pd*disc_rate)
     return loss_adj
+
+
+def get_disc_factor_all(cf: pd.DataFrame, int_rate: pd.DataFrame) -> pd.DataFrame:
+    """할인요소 테이블 생성
+
+    Args:
+        cf (pd.DataFrame): 지급시점
+        int_rate (pd.DataFrame): 할인율
+
+    Returns:
+        pd.DataFrame: [description]
+
+    Example:
+        >>> 일반_보험금진전추이 = pd.read_excel(FILE_PATH / '일반_보험금진전추이.xlsx', dtype={'PDGR_CD': str, 'AY': str})
+        >>> 할인율 = pd.read_excel(FILE_PATH / '할인율.xlsx')
+        >>> 일반_할인요소 = get_disc_factor_all(일반_보험금진전추이, 할인율.query('KICS_SCEN_NO == 1'))
+    """
+    disc_fac_all = []
+    for pdgr_cd in cf['PDGR_CD'].unique():
+        for cf_type in ['보험료', '보험금']:
+            cf_t, cf_rate = get_cf(cf.query('PDGR_CD == @pdgr_cd'), pdgr_cd=pdgr_cd, cf_type=cf_type)
+            disc_fac = get_disc_factor(cf_t, cf_rate, int_rate)
+            disc_fac_all.append([pdgr_cd, disc_fac, cf_type])
+    disc_fac_df = pd.DataFrame(disc_fac_all, columns=['PDGR_CD', 'DISC_FAC', 'PRM_RSV'])
+    disc_fac_df = disc_fac_df.pivot_table(index='PDGR_CD', columns='PRM_RSV', values='DISC_FAC', aggfunc=np.sum).reset_index()
+    disc_fac_df.columns.name = None
+    disc_fac_df = disc_fac_df.rename(columns={'보험금': 'DISC_FAC_RSV', '보험료': 'DISC_FAC_PRM'})
+    return disc_fac_df
 
 
 def get_disc_factor(cf_t: pd.Series, cf_rate: pd.Series, int_rate: pd.DataFrame) -> float:
