@@ -2,6 +2,42 @@ import numpy as np
 import pandas as pd
 from typing import Tuple
 
+def get_disc_factor(cf_t: pd.Series, cf_rate: pd.Series, int_rate: pd.DataFrame) -> float:
+    """할인요소계산
+
+    Args:
+        cf_t (pd.Series): 지급시점
+        cf_rate (pd.Series): 현금흐름비중
+        int_rate (pd.DataFrame): 할인율
+
+    Raises:
+        Exception: [description]
+        Exception: [description]
+
+    Returns:
+        float: 할인요소
+
+    Example:
+        일반_보험금진전추이 = pd.read_excel(FILE_PATH / '일반_보험금진전추이.xlsx')
+        할인율 = pd.read_excel(FILE_PATH / '할인율.xlsx')
+        cf_t, cf_rate = get_cf(일반_보험금진전추이.query('PDGR_CD == "25"'), pdgr_cd="25", cf_type="보험료")
+        get_disc_factor(cf_t, cf_rate, 할인율.query('KICS_SCEN_NO == 1'))
+    """
+
+    # 컬럼 존재성 검사
+    if not set(['MAT_TERM', 'SPOT_RATE']).issubset(int_rate.columns):
+        raise Exception('int_rate 필수 컬럼 누락 오류')
+    if not int_rate['MAT_TERM'].is_unique:
+        raise Exception('MAT_TERM 유일설 오류')
+
+    t = np.round(cf_t*12).astype(int)
+    x = int_rate.set_index('MAT_TERM').loc[t, 'SPOT_RATE'].reset_index()
+    m = x['MAT_TERM']
+    r = x['SPOT_RATE']
+    disc_fac = np.sum(cf_rate/(1+r)**cf_t)
+
+    return disc_fac
+
 
 def get_cf(cf: pd.DataFrame, pdgr_cd: str, cf_type: str) -> Tuple[pd.Series, pd.Series]:
     """보험금/보험료 현금흐름비중 계산
@@ -20,7 +56,7 @@ def get_cf(cf: pd.DataFrame, pdgr_cd: str, cf_type: str) -> Tuple[pd.Series, pd.
         Tuple[pd.Series, pd.Series]: (지급시점, 현금흐름비중)
 
     Example:
-        일반_보험금진전추이 = pd.read_excel('data/현행추정부채_일반/일반_보험금진전추이.xlsx')
+        일반_보험금진전추이 = pd.read_excel(FILE_PATH / '일반_보험금진전추이.xlsx')
         pdgr_cd = '26'
         cf_type = '보험료'
         cf_t, cf = get_cf(일반_보험금진전추이.query('PDGR_CD == @pdgr_cd'), pdgr_cd, cf_type)
@@ -91,6 +127,8 @@ def clsf_crd_grd(data: pd.DataFrame, reins_crd_grd: pd.DataFrame) -> pd.Series:
         raise Exception('data 필수 컬럼 누락 오류')
     if not set(['T02_RN_RINSC_CD', 'CRD_GRD']).issubset(reins_crd_grd.columns):
         raise Exception('reins_crd_grd 필수 컬럼 누락 오류')
+    if set(['CRD_GRD']).issubset(data.columns):
+        data.drop('CRD_GRD', axis=1, inplace=True)
 
     crd_grd = data.merge(reins_crd_grd, on='T02_RN_RINSC_CD', how='left') \
         .assign(CRD_GRD = lambda x: x['CRD_GRD'].fillna('무등급'))
@@ -234,6 +272,8 @@ def clsf_boz_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
         raise Exception('data 필수 컬럼 누락 오류')
     if not set(['PDC_CD', 'PDGR_CD']).issubset(prd_info.columns):
         raise Exception('prd_info 필수 컬럼 누락 오류')
+    if set(['PDGR_CD']).issubset(data.columns):
+        data.drop('PDGR_CD', axis=1, inplace=True)
 
     boz_cd = data \
         .assign(PDC_CD = lambda x: x['ARC_INPL_CD'].str.slice(0,5)) \
@@ -259,9 +299,4 @@ def clsf_boz_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
 
 
 if __name__ == '__main__':
-    import pandas as pd
-    from pathlib import Path
-    FILE_PATH = Path('./data/현행추정부채_일반')
-    일반_상품정보 = pd.read_excel(FILE_PATH / '일반_상품정보.xlsx', dtype={'PDC_CD': str, 'PDGR_CD': str})
-    일반_원수_미경과보험료 = pd.read_excel(FILE_PATH / '일반_원수_미경과보험료.xlsx', dtype={'RRNR_DAT_DVCD': str, 'RRNR_CTC_BZ_DVCD': str, 'ARC_INPL_CD': str})
-    일반_원수_미경과보험료['PDGR_CD'] = clsf_pdgr_cd(일반_원수_미경과보험료, 일반_상품정보)
+    pass
