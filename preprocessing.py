@@ -237,7 +237,7 @@ def clsf_pdgr_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
     ## 아래코드 삭제예정(임시) ##
     pdgr_cd = pdgr_cd.assign(PDGR_CD = lambda x: np.where(x.PDC_CD.isin([
         '13411', '13414', '13415', '13418', '13413', '13416',
-        '13814', '13412', '13512', '13606', '13409', '13510']), '29', x['PDGR_CD']))
+        '13814', '13412', '13512', '13606', '13409', '13510', '10580']), '29', x['PDGR_CD']))
 
     # 전처리 누락여부 검사
     if len(pdgr_cd.query('PDGR_CD == "#"')) != 0:
@@ -291,7 +291,7 @@ def clsf_boz_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
     ## 아래코드 삭제예정(임시) ##
     boz_cd = boz_cd.assign(BOZ_CD = lambda x: np.where(x.PDC_CD.isin([
         '13411', '13414', '13415', '13418', '13413', '13416',
-        '13814', '13412', '13512', '13606', '13409', '13510']), 'A010', x['BOZ_CD']))
+        '13814', '13412', '13512', '13606', '13409', '13510', '10580']), 'A010', x['BOZ_CD']))
 
     # 전처리 누락여부 검사
     if len(boz_cd.query('BOZ_CD == "#"')) != 0:
