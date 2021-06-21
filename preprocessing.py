@@ -75,8 +75,8 @@ def get_loss_adj_rate_all(cf: pd.DataFrame, int_rate: pd.DataFrame, fwd_pd: pd.D
                 cf_t, cf_rate = get_cf(cf.query('PDGR_CD == @pdgr_cd'), pdgr_cd=pdgr_cd, cf_type=cf_type)
                 loss_adj_rate = get_loss_adj_rate(cf_t, cf_rate, crd_grd, int_rate, fwd_pd)
                 loss_adj_rate_all.append([pdgr_cd, crd_grd, loss_adj_rate, cf_type])
-    loss_adj_rate_df = pd.DataFrame(loss_adj_rate_all, columns=['PDGR_CD', 'CRD_GRD_CD', 'LOSS_ADJ_RATE', 'PRM_RSV'])
-    loss_adj_rate_df = loss_adj_rate_df.pivot_table(index=['PDGR_CD', 'CRD_GRD_CD'], columns='PRM_RSV', values='LOSS_ADJ_RATE', aggfunc=np.sum).reset_index()
+    loss_adj_rate_df = pd.DataFrame(loss_adj_rate_all, columns=['PDGR_CD', 'CRD_GRD', 'LOSS_ADJ_RATE', 'PRM_RSV'])
+    loss_adj_rate_df = loss_adj_rate_df.pivot_table(index=['PDGR_CD', 'CRD_GRD'], columns='PRM_RSV', values='LOSS_ADJ_RATE', aggfunc=np.sum).reset_index()
     loss_adj_rate_df.columns.name = None
     loss_adj_rate_df = loss_adj_rate_df.rename(columns={'보험금': 'DISC_FAC_RSV', '보험료': 'DISC_FAC_PRM'})
     loss_adj_rate_df.insert(0, 'RRNR_DVCD', '03')
