@@ -398,6 +398,42 @@ def clsf_pdgr_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
 
     return pdgr_cd['PDGR_CD']
 
+def clsf_boz_cd_c(data: pd.DataFrame, pdgr_info: pd.DataFrame) -> pd.Series:
+    """자동차 BOZ_CD 가공
+
+    Args:
+        data (pd.DataFrame): 자동차 원수/출재, 계약/보상 기초데이터
+        pdgr_info (pd.DataFrame): [description]
+
+    Raises:
+        Exception: [description]
+        Exception: [description]
+        Exception: [description]
+
+    Returns:
+        pd.Series: BOZ_CD 결과
+
+    Example:
+        >>> 자동차_상품군정보 = pd.read_excel(FILE_PATH / '자동차_상품군정보.xlsx', dtype={'PDGR_CD': str, 'BSC_CVR_CD': str})
+        >>> 자동차_원수_미경과보험료 = pd.read_excel(FILE_PATH / f'자동차_원수_미경과보험료_{BASE_YYMM}.xlsx', dtype={'BSC_CVR_CD': str, 'PDGR_CD': str, 'PDC_CD': str, 'INER_CHN_DVCD': str})
+        >>> clsf_boz_cd_c(자동차_원수_미경과보험료, 자동차_상품군정보)
+    """
+
+    # 컬럼 존재성 검사
+    if not set(['PDGR_CD', 'BSC_CVR_CD']).issubset(data.columns):
+        raise Exception('data 필수 컬럼 누락 오류')
+    if not set(['PDGR_CD', 'BSC_CVR_CD', 'BOZ_CD']).issubset(pdgr_info.columns):
+        raise Exception('prd_info 필수 컬럼 누락 오류')
+    if set(['BOZ_CD']).issubset(data.columns):
+        data.drop('BOZ_CD', axis=1, inplace=True)
+    if len(pdgr_info) != len(pdgr_info[['PDGR_CD', 'BSC_CVR_CD']].drop_duplicates()):
+        raise Exception('pdgr_info 키값 유일성 오류')
+
+    boz_cd = data.merge(pdgr_info, on=['PDGR_CD', 'BSC_CVR_CD'], how='left') \
+        .assign(BOZ_CD = lambda x: x['BOZ_CD'].fillna('B007')) # 검토 필요
+
+    return boz_cd['BOZ_CD']
+
 
 def clsf_boz_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
     """BOZ_CD 가공
