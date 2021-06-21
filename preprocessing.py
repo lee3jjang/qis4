@@ -67,7 +67,7 @@ def get_loss_adj_rate_all(cf: pd.DataFrame, int_rate: pd.DataFrame, fwd_pd: pd.D
         >>> 할인율 = pd.read_excel(FILE_PATH / '할인율.xlsx')
         >>> 손실조정율 = get_disc_factor_all(일반_보험금진전추이, 할인율.query('KICS_SCEN_NO == 1'), 선도부도율)
     """
-    
+
     loss_adj_rate_all = []
     for crd_grd in np.append(fwd_pd['GRADE'].unique(), '무등급'):
         for pdgr_cd in cf['PDGR_CD'].unique():
@@ -79,6 +79,7 @@ def get_loss_adj_rate_all(cf: pd.DataFrame, int_rate: pd.DataFrame, fwd_pd: pd.D
     loss_adj_rate_df = loss_adj_rate_df.pivot_table(index=['PDGR_CD', 'CRD_GRD_CD'], columns='PRM_RSV', values='LOSS_ADJ_RATE', aggfunc=np.sum).reset_index()
     loss_adj_rate_df.columns.name = None
     loss_adj_rate_df = loss_adj_rate_df.rename(columns={'보험금': 'DISC_FAC_RSV', '보험료': 'DISC_FAC_PRM'})
+    loss_adj_rate_df.insert(0, 'RRNR_DVCD', '03')
     return loss_adj_rate_df
 
 def get_loss_adj_rate(cf_t: pd.Series, cf_rate: pd.Series, crd_grd: str, int_rate: pd.DataFrame, fwd_pd: pd.DataFrame) -> float:
