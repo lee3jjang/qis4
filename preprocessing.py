@@ -80,6 +80,7 @@ def get_loss_adj_rate_all(cf: pd.DataFrame, int_rate: pd.DataFrame, fwd_pd: pd.D
     loss_adj_rate_df.columns.name = None
     loss_adj_rate_df = loss_adj_rate_df.rename(columns={'보험금': 'DISC_FAC_RSV', '보험료': 'DISC_FAC_PRM'})
     loss_adj_rate_df.insert(0, 'RRNR_DVCD', '03')
+    loss_adj_rate_df = loss_adj_rate_df.loc[lambda x: x['PDGR_CD'].isin(['23', '24', '25', '26', '27', '28', '29', '31'])]
     return loss_adj_rate_df
 
 def get_loss_adj_rate(cf_t: pd.Series, cf_rate: pd.Series, crd_grd: str, int_rate: pd.DataFrame, fwd_pd: pd.DataFrame) -> float:
