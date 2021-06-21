@@ -78,9 +78,9 @@ def get_loss_adj_rate_all(cf: pd.DataFrame, int_rate: pd.DataFrame, fwd_pd: pd.D
     loss_adj_rate_df = pd.DataFrame(loss_adj_rate_all, columns=['PDGR_CD', 'CRD_GRD', 'LOSS_ADJ_RATE', 'PRM_RSV'])
     loss_adj_rate_df = loss_adj_rate_df.pivot_table(index=['PDGR_CD', 'CRD_GRD'], columns='PRM_RSV', values='LOSS_ADJ_RATE', aggfunc=np.sum).reset_index()
     loss_adj_rate_df.columns.name = None
-    loss_adj_rate_df = loss_adj_rate_df.rename(columns={'보험금': 'DISC_FAC_RSV', '보험료': 'DISC_FAC_PRM'})
+    loss_adj_rate_df = loss_adj_rate_df.rename(columns={'보험금': 'LOSS_ADJ_RATE_RSV', '보험료': 'LOSS_ADJ_RATE_PRM'})
     loss_adj_rate_df.insert(0, 'RRNR_DVCD', '03')
-    loss_adj_rate_df = loss_adj_rate_df.loc[lambda x: x['PDGR_CD'].isin(['23', '24', '25', '26', '27', '28', '29', '31'])]
+    loss_adj_rate_df = loss_adj_rate_df.loc[lambda x: x['PDGR_CD'].isin(['23', '24', '25', '26', '27', '28', '29', '31'])].reset_index(drop=True)
     return loss_adj_rate_df
 
 def get_loss_adj_rate(cf_t: pd.Series, cf_rate: pd.Series, crd_grd: str, int_rate: pd.DataFrame, fwd_pd: pd.DataFrame) -> float:
