@@ -354,7 +354,8 @@ def clsf_pdgr_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
         .assign(PDC_CD = lambda x: x['ARC_INPL_CD'].str.slice(0,5)) \
         .merge(prd_info, on='PDC_CD', how='left') \
         .assign(PDGR_CD = lambda x: x['PDGR_CD'].fillna('#')) \
-        .assign(PDGR_CD = lambda x: np.where(x['PDGR_CD'] == '34', '29', x['PDGR_CD'])) \
+        .assign(PDGR_CD = lambda x: np.where(x['PDGR_CD'].isin(['30','34']), '29', x['PDGR_CD'])) \
+        .assign(PDGR_CD = lambda x: np.where(x['PDC_CD'].isin(['10902', '10903']), '29', x['PDGR_CD'])) \
         .assign(PDGR_CD = lambda x: np.where(x.PDC_CD.isin(['10011', '10013', '10016', '10017', '10900', '10901']), '27', x['PDGR_CD']))
 
     ## 아래코드 삭제예정(임시) ##
