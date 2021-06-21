@@ -50,7 +50,38 @@ def clsf_cntr_catg_cd(data: pd.DataFrame, cntr_grp_info: pd.DataFrame) -> pd.Ser
     return catr_catg_cd['CNTR_CATG_CD']
 
 
-def get_loss_adj(cf_t: pd.Series, cf_rate: pd.Series, crd_grd: str, int_rate: pd.DataFrame, fwd_pd: pd.DataFrame) -> float:
+def get_loss_adj_rate_all(cf: pd.DataFrame, int_rate: pd.DataFrame, fwd_pd: pd.DataFrame) -> pd.DataFrame:
+    """손실조정율 테이블 생성
+
+    Args:
+        cf (pd.DataFrame): 보험금 진전추이
+        int_rate (pd.DataFrame): 할인율
+        fwd_pd (pd.DataFrame): 선도부도율
+
+    Returns:
+        pd.DataFrame: 손실조정율 테이블
+    
+    Example:
+        >>> 일반_보험금진전추이 = pd.read_excel(FILE_PATH / '일반_보험금진전추이.xlsx', dtype={'PDGR_CD': str, 'AY': str})
+        >>> 선도부도율 = pd.read_excel(FILE_PATH / '선도부도율.xlsx')
+        >>> 할인율 = pd.read_excel(FILE_PATH / '할인율.xlsx')
+        >>> 손실조정율 = get_disc_factor_all(일반_보험금진전추이, 할인율.query('KICS_SCEN_NO == 1'), 선도부도율)
+    """
+    
+    loss_adj_rate_all = []
+    for crd_grd in np.append(fwd_pd['GRADE'].unique(), '무등급'):
+        for pdgr_cd in cf['PDGR_CD'].unique():
+            for cf_type in ['보험료', '보험금']:
+                cf_t, cf_rate = get_cf(cf.query('PDGR_CD == @pdgr_cd'), pdgr_cd=pdgr_cd, cf_type=cf_type)
+                loss_adj_rate = get_loss_adj_rate(cf_t, cf_rate, crd_grd, int_rate, fwd_pd)
+                loss_adj_rate_all.append([pdgr_cd, crd_grd, loss_adj_rate, cf_type])
+    loss_adj_rate_df = pd.DataFrame(loss_adj_rate_all, columns=['PDGR_CD', 'CRD_GRD_CD', 'LOSS_ADJ_RATE', 'PRM_RSV'])
+    loss_adj_rate_df = loss_adj_rate_df.pivot_table(index=['PDGR_CD', 'CRD_GRD_CD'], columns='PRM_RSV', values='LOSS_ADJ_RATE', aggfunc=np.sum).reset_index()
+    loss_adj_rate_df.columns.name = None
+    loss_adj_rate_df = loss_adj_rate_df.rename(columns={'보험금': 'DISC_FAC_RSV', '보험료': 'DISC_FAC_PRM'})
+    return loss_adj_rate_df
+
+def get_loss_adj_rate(cf_t: pd.Series, cf_rate: pd.Series, crd_grd: str, int_rate: pd.DataFrame, fwd_pd: pd.DataFrame) -> float:
     """손실조정율 계산
 
     Args:
@@ -71,7 +102,7 @@ def get_loss_adj(cf_t: pd.Series, cf_rate: pd.Series, crd_grd: str, int_rate: pd
     Example:
         >>> 일반_보험금진전추이 = pd.read_excel(FILE_PATH / '일반_보험금진전추이.xlsx')
         >>> cf_t, cf_rate = get_cf(일반_보험금진전추이.query('PDGR_CD == "26"'), pdgr_cd='26', cf_type='보험료')
-        >>> get_loss_adj(cf_t, cf_rate, crd_grd='무등급', int_rate=할인율.query('KICS_SCEN_NO == 1'), fwd_pd=선도부도율)
+        >>> get_loss_adj_rate(cf_t, cf_rate, crd_grd='무등급', int_rate=할인율.query('KICS_SCEN_NO == 1'), fwd_pd=선도부도율)
     """
 
     # 컬럼 존재성 검사
@@ -94,19 +125,19 @@ def get_loss_adj(cf_t: pd.Series, cf_rate: pd.Series, crd_grd: str, int_rate: pd
     
     lgd = 0.5
     loss = lgd*cf_rate[::-1].cumsum()[::-1]
-    loss_adj = np.sum(loss*fwd_pd*disc_rate)
-    return loss_adj
+    loss_adj_rate = np.sum(loss*fwd_pd*disc_rate)
+    return loss_adj_rate
 
 
 def get_disc_factor_all(cf: pd.DataFrame, int_rate: pd.DataFrame) -> pd.DataFrame:
     """할인요소 테이블 생성
 
     Args:
-        cf (pd.DataFrame): 지급시점
+        cf (pd.DataFrame): 보험금 진전추이
         int_rate (pd.DataFrame): 할인율
 
     Returns:
-        pd.DataFrame: [description]
+        pd.DataFrame: 할인요소 테이블
 
     Example:
         >>> 일반_보험금진전추이 = pd.read_excel(FILE_PATH / '일반_보험금진전추이.xlsx', dtype={'PDGR_CD': str, 'AY': str})
