@@ -542,6 +542,8 @@ def clsf_pdgr_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
         .assign(PDC_CD = lambda x: x['ARC_INPL_CD'].str.slice(0,5)) \
         .merge(prd_info, on='PDC_CD', how='left') \
         .assign(PDGR_CD = lambda x: x['PDGR_CD'].fillna('#')) \
+        .assign(PDGR_CD = lambda x: np.where(x['PDC_CD'] == '10420', '25', x['PDGR_CD'])) \
+        .assign(PDGR_CD = lambda x: np.where(x['PDC_CD'] == '13804', '26', x['PDGR_CD'])) \
         .assign(PDGR_CD = lambda x: np.where(x['PDGR_CD'].isin(['30','34']), '29', x['PDGR_CD'])) \
         .assign(PDGR_CD = lambda x: np.where(x['PDC_CD'].isin(['10902', '10903']), '29', x['PDGR_CD'])) \
         .assign(PDGR_CD = lambda x: np.where(x.PDC_CD.isin(['10011', '10013', '10016', '10017', '10580', '10900', '10901']), '27', x['PDGR_CD']))
@@ -625,6 +627,8 @@ def clsf_boz_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
         .assign(PDC_CD = lambda x: x['ARC_INPL_CD'].str.slice(0,5)) \
         .merge(prd_info, on='PDC_CD', how='left') \
         .assign(BOZ_CD = lambda x: x['PDGR_CD'].map(lambda y: pdgr_boz_mapper.get(y, '#'))) \
+        .assign(BOZ_CD = lambda x: np.where(x['PDC_CD'] == '10420', 'A005', x['BOZ_CD'])) \
+        .assign(BOZ_CD = lambda x: np.where(x['PDC_CD'] == '13804', 'A006', x['BOZ_CD'])) \
         .assign(BOZ_CD = lambda x: np.where(x['PDC_CD'] == '10607', 'A008', x['BOZ_CD'])) \
         .assign(BOZ_CD = lambda x: np.where(x['PDGR_CD'] == '30', 'A010', x['BOZ_CD'])) \
         .assign(BOZ_CD = lambda x: np.where(x['PDC_CD'].isin(['10902', '10903']) & (x.DMFR_DVCD == '01'), 'A009', x['BOZ_CD'])) \
