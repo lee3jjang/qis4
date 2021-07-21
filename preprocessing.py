@@ -3,6 +3,43 @@ import pandas as pd
 from typing import Tuple
 
 
+def clsf_tty_cd_grp(data: pd.DataFrame) -> pd.Series:
+    """TTY_CD_GRP 가공
+
+    Args:
+        data (pd.DataFrame): 재보험특약정보
+
+    Raises:
+        Exception: [description]
+        Exception: [description]
+
+    Returns:
+        pd.Series: TTY_CD_GRP 결과
+
+    Examples:
+        >>> 일반_특약정보 = pd.read_excel(FILE_PATH / f'일반_특약정보_{BASE_YYMM}.xlsx', dtype={'RRNR_TTY_CD': str, 'TTY_YR': str})
+        >>> 일반_특약정보['TTY_CD_GRP'] = clsf_tty_cd_grp(일반_특약정보)
+    """
+    # 컬럼 존재성 검사
+    if not set(['TTY_CD_NM']).issubset(data.columns):
+        raise Exception('data 필수 컬럼 누락 오류')
+
+    tty_cd_grp = data.copy()
+    tty_cd_grp['TTY_CD_GRP'] = "#"
+    tty_cd_grp.loc[lambda x: x['TTY_CD_NM'].str.contains('기술보험'), 'TTY_CD_GRP'] = '기술보험특약'
+    tty_cd_grp.loc[lambda x: x['TTY_CD_NM'].str.contains('해외PST'), 'TTY_CD_GRP'] = '해외PST'
+    tty_cd_grp.loc[lambda x: x['TTY_CD_NM'].str.contains('근재보험'), 'TTY_CD_GRP'] = '근재보험특약'
+    tty_cd_grp.loc[lambda x: x['TTY_CD_NM'].str.contains('배상책임보험'), 'TTY_CD_GRP'] = '배상책임보험특약'
+    tty_cd_grp.loc[lambda x: x['TTY_CD_NM'].str.contains('재물보험|패키지', regex=True), 'TTY_CD_GRP'] = '재물보험특약'
+
+    # 전처리 누락여부 검사
+    if len(tty_cd_grp.query('TTY_CD_GRP == "#"')) != 0:
+        print(tty_cd_grp.query('TTY_CD_GRP == "#"'))
+        raise Exception('전처리 누락 오류')
+
+    return tty_cd_grp['TTY_CD_GRP']
+
+
 def clsf_cntr_catg_cd(data: pd.DataFrame, cntr_grp_info: pd.DataFrame) -> pd.Series:
     """CNTR_CATG_CD 가공
 
