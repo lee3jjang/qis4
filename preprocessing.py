@@ -3,6 +3,31 @@ import pandas as pd
 from typing import Tuple
 
 
+def get_ret_risk_rate_by_risk_coef(comm: pd.DataFrame, prem: pd.DataFrame, loss_ratio: float, risk_coef: float) -> pd.DataFrame:
+    comm2 = comm \
+        .assign(
+            COMM_RATE_BASE = lambda x: np.fmax(np.fmin(x['CMSN_MULT_RT']*(x['BSE_LSRT']-loss_ratio)+x['CMSN_ADD_RT'], x['TOP_CMSN_RT']), x['LWT_CMSN_RT']),
+            COMM_RATE_SHOCKED = lambda x: np.fmax(np.fmin(x['CMSN_MULT_RT']*(x['BSE_LSRT']-(1+risk_coef))+x['CMSN_ADD_RT'], x['TOP_CMSN_RT']), x['LWT_CMSN_RT']),
+        ) \
+        [['TTY_YR', 'COMM_RATE_BASE', 'COMM_RATE_SHOCKED']]
+    prem2 = prem.merge(comm2, on='TTY_YR', how='left') \
+        .assign(
+            ORI_EXP_LOSS_BASE = lambda x: x['ELP_PRM']*loss_ratio,
+            ORI_EXP_LOSS_SHOCKED = lambda x: x['ELP_PRM']*(1+risk_coef),
+            ORI_EXP_LOSS_DIFF = lambda x: x['ORI_EXP_LOSS_SHOCKED'] - x['ORI_EXP_LOSS_BASE'],
+            RET_EXP_LOSS_BASE = lambda x: (x['ELP_PRM']-x['T02_RN_ELP_PRM'])*loss_ratio,
+            RET_EXP_LOSS_SHOCKED = lambda x: (x['ELP_PRM']-x['T02_RN_ELP_PRM'])*(1+risk_coef),
+            RET_EXP_LOSS_DIFF = lambda x: x['RET_EXP_LOSS_SHOCKED'] - x['RET_EXP_LOSS_BASE'],
+            COMM_BASE = lambda x: x['T02_RN_ELP_PRM']*x['COMM_RATE_BASE'],
+            COMM_SHOCKED = lambda x: x['T02_RN_ELP_PRM']*x['COMM_RATE_SHOCKED'],
+            COMM_DIFF = lambda x: x['COMM_SHOCKED'] - x['COMM_BASE'],
+        ) \
+        .drop(['COMM_RATE_BASE', 'COMM_RATE_SHOCKED'], axis=1) \
+        .astype({'T02_RN_ELP_PRM': float}) \
+        .sort_values(by=['BOZ_CD', 'TTY_YR'])
+    return prem2
+
+
 def clsf_tty_cd_grp(data: pd.DataFrame) -> pd.Series:
     """TTY_CD_GRP 가공
 
@@ -593,14 +618,16 @@ def clsf_pdgr_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
     """
     # 컬럼 존재성 검사
     if not set(['ARC_INPL_CD']).issubset(data.columns):
-        raise Exception('data 필수 컬럼 누락 오류')
+        if not set(['PDC_CD']).issubset(data.columns):
+            raise Exception('data 필수 컬럼 누락 오류')
     if not set(['PDC_CD', 'PDGR_CD']).issubset(prd_info.columns):
         raise Exception('prd_info 필수 컬럼 누락 오류')
     if set(['PDGR_CD']).issubset(data.columns):
         data.drop('PDGR_CD', axis=1, inplace=True)
 
+    if 'ARC_INPL_CD' in data.columns:
+        data = data.assign(PDC_CD = lambda x: x['ARC_INPL_CD'].str.slice(0,5))
     pdgr_cd = data \
-        .assign(PDC_CD = lambda x: x['ARC_INPL_CD'].str.slice(0,5)) \
         .merge(prd_info, on='PDC_CD', how='left') \
         .assign(PDGR_CD = lambda x: x['PDGR_CD'].fillna('#')) \
         .assign(PDGR_CD = lambda x: np.where(x['PDC_CD'] == '10420', '25', x['PDGR_CD'])) \
@@ -678,14 +705,16 @@ def clsf_boz_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
 
     # 컬럼 존재성 검사
     if not set(['ARC_INPL_CD', 'DMFR_DVCD']).issubset(data.columns):
-        raise Exception('data 필수 컬럼 누락 오류')
+        if not set(['PDC_CD']).issubset(data.columns):
+            raise Exception('data 필수 컬럼 누락 오류')
     if not set(['PDC_CD', 'PDGR_CD']).issubset(prd_info.columns):
         raise Exception('prd_info 필수 컬럼 누락 오류')
     if set(['PDGR_CD']).issubset(data.columns):
         data.drop('PDGR_CD', axis=1, inplace=True)
 
+    if 'ARC_INPL_CD' in data.columns:
+        data = data.assign(PDC_CD = lambda x: x['ARC_INPL_CD'].str.slice(0,5))
     boz_cd = data \
-        .assign(PDC_CD = lambda x: x['ARC_INPL_CD'].str.slice(0,5)) \
         .merge(prd_info, on='PDC_CD', how='left') \
         .assign(BOZ_CD = lambda x: x['PDGR_CD'].map(lambda y: pdgr_boz_mapper.get(y, '#'))) \
         .assign(BOZ_CD = lambda x: np.where(x['PDC_CD'] == '10420', 'A005', x['BOZ_CD'])) \
