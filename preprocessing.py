@@ -40,6 +40,30 @@ def clsf_tty_cd_grp(data: pd.DataFrame) -> pd.Series:
     return tty_cd_grp['TTY_CD_GRP']
 
 
+def clsf_p_np_dvcd(data: pd.DataFrame) -> pd.Series:
+
+    # 컬럼 존재성 검사
+    if not set(['RRNR_DVCD']).issubset(data.columns):
+        raise Exception('data 필수 컬럼 누락 오류')
+    if 'INRI_RN_KND_CD' in data.columns:
+        rn_knd_col = 'INRI_RN_KND_CD'
+    elif 'RN_KND_CD' in data.columns:
+        rn_knd_col = 'RN_KND_CD'
+    else:
+        raise Exception('data 필수 컬럼 누락 오류')
+
+    # 출수재종류코드 -> 비례비비례 mapper
+    p_np_mapper = {'TP': 'P', 'TN': 'N', 'FP': 'P', 'FN': 'N', 'AP': 'P', 'TJ': 'P'}
+
+    p_np_dvcd = data \
+        .assign(P_NP_DVCD = lambda x: x[rn_knd_col].apply(lambda y: p_np_mapper.get(y, 'P'))) \
+        .assign(P_NP_DVCD = lambda x: np.where(x['RRNR_DVCD']=="01", "#", x['P_NP_DVCD']))
+
+    return p_np_dvcd['P_NP_DVCD']
+
+
+
+
 def clsf_cntr_catg_cd(data: pd.DataFrame, cntr_grp_info: pd.DataFrame) -> pd.Series:
     """CNTR_CATG_CD 가공
 
