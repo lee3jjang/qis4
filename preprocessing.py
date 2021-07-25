@@ -617,16 +617,13 @@ def clsf_pdgr_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
         >>> 일반_원수_미경과보험료['PDGR_CD'] = clsf_pdgr_cd(일반_원수_미경과보험료, 일반_상품정보)
     """
     # 컬럼 존재성 검사
-    if not set(['ARC_INPL_CD']).issubset(data.columns):
-        if not set(['PDC_CD']).issubset(data.columns):
-            raise Exception('data 필수 컬럼 누락 오류')
+    if not set(['PDC_CD']).issubset(data.columns):
+        raise Exception('data 필수 컬럼 누락 오류')
     if not set(['PDC_CD', 'PDGR_CD']).issubset(prd_info.columns):
         raise Exception('prd_info 필수 컬럼 누락 오류')
     if set(['PDGR_CD']).issubset(data.columns):
         data.drop('PDGR_CD', axis=1, inplace=True)
 
-    if 'ARC_INPL_CD' in data.columns:
-        data = data.assign(PDC_CD = lambda x: x['ARC_INPL_CD'].str.slice(0,5))
     pdgr_cd = data \
         .merge(prd_info, on='PDC_CD', how='left') \
         .assign(PDGR_CD = lambda x: x['PDGR_CD'].fillna('#')) \
