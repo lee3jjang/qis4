@@ -528,13 +528,15 @@ def clsf_crd_grd(data: pd.DataFrame, reins_crd_grd: pd.DataFrame) -> pd.Series:
     if set(['CRD_GRD']).issubset(data.columns):
         data.drop('CRD_GRD', axis=1, inplace=True)
 
+        
+
     crd_grd = data.merge(reins_crd_grd, on='T02_RN_RINSC_CD', how='left') \
         .assign(CRD_GRD = lambda x: x['CRD_GRD'].fillna('무등급'))
 
     return crd_grd['CRD_GRD']
 
 
-def clsf_rrnr_dvcd(data: pd.DataFrame, ret_type: str) -> pd.Series:
+def clsf_rrnr_dvcd(data: pd.DataFrame,) -> pd.Series:
     """RRNR_DVCD 가공
 
     Args:
@@ -553,14 +555,10 @@ def clsf_rrnr_dvcd(data: pd.DataFrame, ret_type: str) -> pd.Series:
         >>> 일반_원수_미경과보험료['RRNR_DVCD'] = clsf_rrnr_dvcd(일반_원수_미경과보험료, '원수')
     """
 
-    if ret_type == '원수':
-        data['RRNR_DVCD'] = data['RRNR_DAT_DVCD'].map(lambda x: {'01': '01', '02': '02', '03': '02'}.get(x, '#'))
-        if '#' in data['RRNR_DVCD'].values:
-            raise Exception('전처리 누락 오류')
-    elif ret_type == '출재':
-        data['RRNR_DVCD'] = '03'
-    else:
-        raise Exception('보유구분 입력 오류')
+    data['RRNR_DVCD'] = data['RRNR_DAT_DVCD'].map(lambda x: {'01': '01', '02': '02', '03': '02'}.get(x, '#'))
+    
+    if '#' in data['RRNR_DVCD'].values:
+        raise Exception('전처리 누락 오류')
 
     return data['RRNR_DVCD']
 
