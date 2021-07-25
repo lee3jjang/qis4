@@ -24,7 +24,7 @@ def get_ret_risk_rate_by_risk_coef(comm: pd.DataFrame, prem: pd.DataFrame, loss_
         ) \
         .drop(['COMM_RATE_BASE', 'COMM_RATE_SHOCKED'], axis=1) \
         .astype({'RN_ELP_PRM': float}) \
-        .sort_values(by=['BOZ_CD', 'TTY_YR'])
+        .sort_values(by=['TTY_YR'])
     return prem2
 
 
