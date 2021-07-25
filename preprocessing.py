@@ -114,7 +114,7 @@ def clsf_cntr_catg_cd(data: pd.DataFrame, cntr_grp_info: pd.DataFrame) -> pd.Ser
     """
 
     # 컬럼 존재성 검사
-    if not set(['NTNL_CTRY_CD', 'ARC_INPL_CD', 'DMFR_DVCD']).issubset(data.columns):
+    if not set(['NTNL_CTRY_CD', 'PDC_CD', 'DMFR_DVCD']).issubset(data.columns):
         raise Exception('data 필수 컬럼 누락 오류')
     if not set(['CNTR_CD', 'CNTR_CATG_CD']).issubset(cntr_grp_info.columns):
         raise Exception('cntr_grp_info 필수 컬럼 누락 오류')
@@ -126,7 +126,7 @@ def clsf_cntr_catg_cd(data: pd.DataFrame, cntr_grp_info: pd.DataFrame) -> pd.Ser
     catr_catg_cd = data \
         .merge(cntr_grp_info, left_on='NTNL_CTRY_CD', right_on='CNTR_CD', how='left') \
         .assign(CNTR_CATG_CD = lambda x: x['CNTR_CATG_CD'].fillna('#')) \
-        .assign(CNTR_CATG_CD = lambda x: np.where(x['DMFR_DVCD'] == '01', '01', np.where(x['ARC_INPL_CD'].str.slice(0,5)=='10900', '04', x['CNTR_CATG_CD'])))
+        .assign(CNTR_CATG_CD = lambda x: np.where(x['DMFR_DVCD'] == '01', '01', np.where(x['PDC_CD']=='10900', '04', x['CNTR_CATG_CD'])))
     
     # 전처리 누락여부 검사
     if len(catr_catg_cd.query('CNTR_CATG_CD == "#"')) != 0:
@@ -585,7 +585,7 @@ def clsf_dmfr_dvcd(data: pd.DataFrame) -> pd.Series:
     """
 
     # 컬럼 존재성 검사
-    if not set(['RRNR_DVCD', 'ARC_INPL_CD']).issubset(data.columns):
+    if not set(['RRNR_DVCD', 'PDC_CD']).issubset(data.columns):
         raise Exception('data 필수 컬럼 누락 오류')
     if 'RRNR_CTC_BZ_DVCD' in data.columns:
         dmfr_col = 'RRNR_CTC_BZ_DVCD'
@@ -595,7 +595,7 @@ def clsf_dmfr_dvcd(data: pd.DataFrame) -> pd.Series:
         raise Exception('data 필수 컬럼 누락 오류')
 
     dmfr_dvcd = data \
-        .assign(DMFR_DVCD = lambda x: np.where((x['ARC_INPL_CD'] == '1069010') & (x['RRNR_DVCD'] == '02'), '02', x[dmfr_col])) \
+        .assign(DMFR_DVCD = lambda x: np.where((x['PDC_CD'] == '10690') & (x['RRNR_DVCD'] == '02'), '02', x[dmfr_col])) \
         .assign(DMFR_DVCD = lambda x: np.where(x['DMFR_DVCD'] == '2', '02', '01'))
 
     return dmfr_dvcd['DMFR_DVCD']
@@ -704,16 +704,13 @@ def clsf_boz_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
     }
 
     # 컬럼 존재성 검사
-    if not set(['ARC_INPL_CD', 'DMFR_DVCD']).issubset(data.columns):
-        if not set(['PDC_CD']).issubset(data.columns):
-            raise Exception('data 필수 컬럼 누락 오류')
+    if not set(['PDC_CD', 'DMFR_DVCD']).issubset(data.columns):
+        raise Exception('data 필수 컬럼 누락 오류')
     if not set(['PDC_CD', 'PDGR_CD']).issubset(prd_info.columns):
         raise Exception('prd_info 필수 컬럼 누락 오류')
     if set(['PDGR_CD']).issubset(data.columns):
         data.drop('PDGR_CD', axis=1, inplace=True)
 
-    if 'ARC_INPL_CD' in data.columns:
-        data = data.assign(PDC_CD = lambda x: x['ARC_INPL_CD'].str.slice(0,5))
     boz_cd = data \
         .merge(prd_info, on='PDC_CD', how='left') \
         .assign(BOZ_CD = lambda x: x['PDGR_CD'].map(lambda y: pdgr_boz_mapper.get(y, '#'))) \
