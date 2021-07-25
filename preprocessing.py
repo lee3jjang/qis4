@@ -12,18 +12,18 @@ def get_ret_risk_rate_by_risk_coef(comm: pd.DataFrame, prem: pd.DataFrame, loss_
         [['TTY_YR', 'COMM_RATE_BASE', 'COMM_RATE_SHOCKED']]
     prem2 = prem.merge(comm2, on='TTY_YR', how='left') \
         .assign(
-            ORI_EXP_LOSS_BASE = lambda x: x['ELP_PRM']*loss_ratio,
-            ORI_EXP_LOSS_SHOCKED = lambda x: x['ELP_PRM']*(1+risk_coef),
-            ORI_EXP_LOSS_DIFF = lambda x: x['ORI_EXP_LOSS_SHOCKED'] - x['ORI_EXP_LOSS_BASE'],
-            RET_EXP_LOSS_BASE = lambda x: (x['ELP_PRM']-x['T02_RN_ELP_PRM'])*loss_ratio,
-            RET_EXP_LOSS_SHOCKED = lambda x: (x['ELP_PRM']-x['T02_RN_ELP_PRM'])*(1+risk_coef),
+            OGL_EXP_LOSS_BASE = lambda x: x['OGL_ELP_PRM']*loss_ratio,
+            OGL_EXP_LOSS_SHOCKED = lambda x: x['OGL_ELP_PRM']*(1+risk_coef),
+            OGL_EXP_LOSS_DIFF = lambda x: x['OGL_EXP_LOSS_SHOCKED'] - x['OGL_EXP_LOSS_BASE'],
+            RET_EXP_LOSS_BASE = lambda x: (x['OGL_ELP_PRM']-x['RN_ELP_PRM'])*loss_ratio,
+            RET_EXP_LOSS_SHOCKED = lambda x: (x['OGL_ELP_PRM']-x['RN_ELP_PRM'])*(1+risk_coef),
             RET_EXP_LOSS_DIFF = lambda x: x['RET_EXP_LOSS_SHOCKED'] - x['RET_EXP_LOSS_BASE'],
-            COMM_BASE = lambda x: x['T02_RN_ELP_PRM']*x['COMM_RATE_BASE'],
-            COMM_SHOCKED = lambda x: x['T02_RN_ELP_PRM']*x['COMM_RATE_SHOCKED'],
+            COMM_BASE = lambda x: x['RN_ELP_PRM']*x['COMM_RATE_BASE'],
+            COMM_SHOCKED = lambda x: x['RN_ELP_PRM']*x['COMM_RATE_SHOCKED'],
             COMM_DIFF = lambda x: x['COMM_SHOCKED'] - x['COMM_BASE'],
         ) \
         .drop(['COMM_RATE_BASE', 'COMM_RATE_SHOCKED'], axis=1) \
-        .astype({'T02_RN_ELP_PRM': float}) \
+        .astype({'RN_ELP_PRM': float}) \
         .sort_values(by=['BOZ_CD', 'TTY_YR'])
     return prem2
 
