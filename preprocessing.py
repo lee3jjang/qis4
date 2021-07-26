@@ -1,6 +1,36 @@
 import numpy as np
 import pandas as pd
 from typing import Tuple
+from scipy.stats import lognorm
+
+
+def get_ret_risk_rate_by_loss_dist(ogl_elp_prm_tty: float, rn_elp_prm_tty: float, ogl_loss_tty: float, rn_loss_tty: float,
+    ogl_1yr_elp_prm_tty_boz: float, rn_1yr_elp_prm_tty_boz:float, ogl_1yr_loss_tty_boz: float, rn_1yr_loss_tty_boz: float, loss_ratio: float, cv: float,
+    slope: float, a: float, b: float, top: float, bottom: float) -> Tuple[float, float]:
+    """특약별 보유리스크율(손해율분포법)"""
+
+    # logic
+    mean, std = loss_ratio, loss_ratio*cv
+    mu = 2*np.log(mean)-np.log(mean**2+std**2)/2
+    sigma = (np.log(mean**2+std**2)-2*np.log(mean))**0.5
+    u = (np.arange(1000)+1)/1001
+    ogl_1yr_loss_ratio_tty_boz_sample = lognorm.ppf(u, sigma, loc=0, scale=np.exp(mu))
+
+    ogl_1yr_loss_tty_boz_sample = ogl_1yr_elp_prm_tty_boz*ogl_1yr_loss_ratio_tty_boz_sample
+    ogl_loss_tty_sample = ogl_loss_tty - ogl_1yr_loss_tty_boz + ogl_1yr_loss_tty_boz_sample
+    ogl_exp_loss_tty = ogl_loss_tty_sample.mean()
+    ogl_risk = np.fmax(ogl_loss_tty_sample-ogl_exp_loss_tty, 0)
+
+    ret_rate = (ogl_1yr_elp_prm_tty_boz-rn_1yr_elp_prm_tty_boz)/ogl_1yr_elp_prm_tty_boz
+    ret_loss_tty_sample = (ogl_loss_tty-ogl_1yr_loss_tty_boz)-(rn_loss_tty-rn_1yr_loss_tty_boz)+ogl_1yr_loss_tty_boz_sample*ret_rate
+    rn_loss_ratio_tty_sample = (ogl_loss_tty_sample-ret_loss_tty_sample)/rn_elp_prm_tty
+    comm_tty_sample = rn_elp_prm_tty*np.fmax(np.fmin(slope*(a-rn_loss_ratio_tty_sample)+b, top), bottom)
+    ret_cashflow_tty_sample = ret_loss_tty_sample-comm_tty_sample
+    ret_exp_cashflow_tty = ret_cashflow_tty_sample.mean()
+    ret_risk = np.fmax(ret_cashflow_tty_sample-ret_exp_cashflow_tty, 0)
+
+    # return
+    return ogl_risk.mean(), ret_risk.mean()
 
 
 def get_ret_risk_rate_by_risk_coef(comm: pd.DataFrame, prem: pd.DataFrame, loss_ratio: float, risk_coef: float) -> pd.DataFrame:
