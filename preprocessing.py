@@ -51,17 +51,17 @@ def get_ret_risk_rate_by_risk_coef(boz_cd: str, tty_cd_grp: str, comm: pd.DataFr
             B = lambda x: x['CMSN_ADD_RT'],
             MAX = lambda x: x['TOP_CMSN_RT'],
             MIN = lambda x:  x['LWT_CMSN_RT'],
-            OGL_EXP_LOSS_BASE = lambda x: x['OGL_ELP_PRM']*loss_ratio,
-            OGL_EXP_LOSS_SHOCKED = lambda x: x['OGL_ELP_PRM']*(1+rsk_coef),
+            OGL_EXP_LOSS_BASE = lambda x: x['OGL_ELP_PRM_1YR']*loss_ratio,
+            OGL_EXP_LOSS_SHOCKED = lambda x: x['OGL_ELP_PRM_1YR']*(1+rsk_coef),
             OGL_EXP_LOSS_DIFF = lambda x: x['OGL_EXP_LOSS_SHOCKED'] - x['OGL_EXP_LOSS_BASE'],
-            RET_EXP_LOSS_BASE = lambda x: (x['OGL_ELP_PRM']-x['RN_ELP_PRM'])*loss_ratio,
-            RET_EXP_LOSS_SHOCKED = lambda x: (x['OGL_ELP_PRM']-x['RN_ELP_PRM'])*(1+rsk_coef),
+            RET_EXP_LOSS_BASE = lambda x: (x['OGL_ELP_PRM_1YR']-x['RN_ELP_PRM_1YR'])*loss_ratio,
+            RET_EXP_LOSS_SHOCKED = lambda x: (x['OGL_ELP_PRM_1YR']-x['RN_ELP_PRM_1YR'])*(1+rsk_coef),
             RET_EXP_LOSS_DIFF = lambda x: x['RET_EXP_LOSS_SHOCKED'] - x['RET_EXP_LOSS_BASE'],
-            COMM_BASE = lambda x: x['RN_ELP_PRM']*x['COMM_RATE_BASE'],
-            COMM_SHOCKED = lambda x: x['RN_ELP_PRM']*x['COMM_RATE_SHOCKED'],
+            COMM_BASE = lambda x: x['RN_ELP_PRM_1YR']*x['COMM_RATE_BASE'],
+            COMM_SHOCKED = lambda x: x['RN_ELP_PRM_1YR']*x['COMM_RATE_SHOCKED'],
         ) \
         .drop(['COMM_RATE_BASE', 'COMM_RATE_SHOCKED'], axis=1) \
-        .astype({'RN_ELP_PRM': float}) \
+        .astype({'RN_ELP_PRM_1YR': float}) \
         .sort_values(by=['TTY_YR'])
     return prem2
 
