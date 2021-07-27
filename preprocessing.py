@@ -50,7 +50,6 @@ def get_ret_risk_rate_by_risk_coef(comm: pd.DataFrame, prem: pd.DataFrame, loss_
             RET_EXP_LOSS_DIFF = lambda x: x['RET_EXP_LOSS_SHOCKED'] - x['RET_EXP_LOSS_BASE'],
             COMM_BASE = lambda x: x['RN_ELP_PRM']*x['COMM_RATE_BASE'],
             COMM_SHOCKED = lambda x: x['RN_ELP_PRM']*x['COMM_RATE_SHOCKED'],
-            COMM_DIFF = lambda x: x['COMM_SHOCKED'] - x['COMM_BASE'],
         ) \
         .drop(['COMM_RATE_BASE', 'COMM_RATE_SHOCKED'], axis=1) \
         .astype({'RN_ELP_PRM': float}) \
