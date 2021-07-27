@@ -529,41 +529,58 @@ def get_cf_c(cf: pd.DataFrame, boz_cd: str, cf_type: str) -> Tuple[pd.Series, pd
         raise Exception('cf_type 입력 오류')
 
 
-def clsf_crd_grd(data: pd.DataFrame, reins_crd_grd: pd.DataFrame) -> pd.Series:
-    """CRD_GRD 가공
+# def clsf_crd_grd(data: pd.DataFrame, reins_crd_grd: pd.DataFrame) -> pd.Series:
+#     """CRD_GRD 가공
 
-    Args:
-        data (pd.DataFrame): 일반 출재, 계약/보상 기초데이터
-        reins_crd_grd (pd.DataFrame): 재보험자별 신용등급
+#     Args:
+#         data (pd.DataFrame): 일반 출재, 계약/보상 기초데이터
+#         reins_crd_grd (pd.DataFrame): 재보험자별 신용등급
 
-    Raises:
-        Exception: [description]
-        Exception: [description]
+#     Raises:
+#         Exception: [description]
+#         Exception: [description]
 
-    Returns:
-        pd.Series: CRD_GRD 결과
+#     Returns:
+#         pd.Series: CRD_GRD 결과
 
-    Example:
-        >>> 일반_출재_미경과보험료 = pd.read_excel(FILE_PATH / '일반_출재_미경과보험료.xlsx', dtype={'RRNR_DAT_DVCD': str, 'RRNR_CTC_BZ_DVCD': str, 'ARC_INPL_CD': str, 'T02_RN_RINSC_CD': str})
-        >>> 재보험자_국내신용등급 = pd.read_excel(FILE_PATH / '재보험자_국내신용등급.xlsx', dtype={'재보험사코드': str}) \
-                .rename(columns = {'재보험사코드': 'T02_RN_RINSC_CD', '국내신용등급': 'CRD_GRD'})
-        >>> 일반_출재_미경과보험료['CRD_GRD'] = clsf_crd_grd(일반_출재_미경과보험료, 재보험자_국내신용등급)
-    """
+#     Example:
+#         >>> 일반_출재_미경과보험료 = pd.read_excel(FILE_PATH / '일반_출재_미경과보험료.xlsx', dtype={'RRNR_DAT_DVCD': str, 'RRNR_CTC_BZ_DVCD': str, 'ARC_INPL_CD': str, 'T02_RN_RINSC_CD': str})
+#         >>> 재보험자_국내신용등급 = pd.read_excel(FILE_PATH / '재보험자_국내신용등급.xlsx', dtype={'재보험사코드': str}) \
+#                 .rename(columns = {'재보험사코드': 'T02_RN_RINSC_CD', '국내신용등급': 'CRD_GRD'})
+#         >>> 일반_출재_미경과보험료['CRD_GRD'] = clsf_crd_grd(일반_출재_미경과보험료, 재보험자_국내신용등급)
+#     """
 
-    # 컬럼 존재성 검사
-    if not set(['T02_RN_RINSC_CD']).issubset(data.columns):
-        raise Exception('data 필수 컬럼 누락 오류')
-    if not set(['T02_RN_RINSC_CD', 'CRD_GRD']).issubset(reins_crd_grd.columns):
-        raise Exception('reins_crd_grd 필수 컬럼 누락 오류')
-    if set(['CRD_GRD']).issubset(data.columns):
-        data.drop('CRD_GRD', axis=1, inplace=True)
+#     # 컬럼 존재성 검사
+#     if not set(['T02_RN_RINSC_CD']).issubset(data.columns):
+#         raise Exception('data 필수 컬럼 누락 오류')
+#     if not set(['T02_RN_RINSC_CD', 'CRD_GRD']).issubset(reins_crd_grd.columns):
+#         raise Exception('reins_crd_grd 필수 컬럼 누락 오류')
+#     if set(['CRD_GRD']).issubset(data.columns):
+#         data.drop('CRD_GRD', axis=1, inplace=True)
 
         
 
-    crd_grd = data.merge(reins_crd_grd, on='T02_RN_RINSC_CD', how='left') \
-        .assign(CRD_GRD = lambda x: x['CRD_GRD'].fillna('무등급'))
+#     crd_grd = data.merge(reins_crd_grd, on='T02_RN_RINSC_CD', how='left') \
+#         .assign(CRD_GRD = lambda x: x['CRD_GRD'].fillna('무등급'))
 
+#     return crd_grd['CRD_GRD']
+
+def clsf_rinsc_cd(data: pd.DataFrame, rinsc_cd_info: pd.DataFrame) -> pd.Series:
+    rinsc_cd = data.merge(rinsc_cd_info, on='T02_RN_RINSC_CD', how='left') \
+        .assign(RINSC_CD = lambda x: np.where(x['RINSC_CD'].isna(), x['T02_RN_RINSC_CD'], x['RINSC_CD']))
+    return rinsc_cd['RINSC_CD']
+
+
+def clsf_crd_grd(data: pd.DataFrame, reins_crd_grd: pd.DataFrame) -> pd.Series:
+    crd_grd = data.merge(reins_crd_grd, on='RINSC_CD', how='left') \
+        .assign(CRD_GRD = lambda x: x['CRD_GRD'].fillna('무등급'))
     return crd_grd['CRD_GRD']
+
+
+def clsf_kics_crd_grd(data: pd.DataFrame, reins_kics_crd_grd: pd.DataFrame) -> pd.Series:
+    kics_crd_grd = data.merge(reins_kics_crd_grd, on='RINSC_CD', how='left') \
+        .assign(KICS_CRD_GRD = lambda x: x['KICS_CRD_GRD'].fillna('무등급'))
+    return kics_crd_grd['KICS_CRD_GRD']
 
 
 def clsf_rrnr_dvcd(data: pd.DataFrame,) -> pd.Series:
