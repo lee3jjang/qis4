@@ -3,6 +3,56 @@ import pandas as pd
 from typing import Tuple
 from scipy.stats import lognorm
 
+def get_comm_c(uy: str, loss_ratio: float) -> float:
+    if uy == '2020':
+        if loss_ratio <= 0.70: comm = 0.24
+        elif loss_ratio <= 0.80: comm = 0.9940 - loss_ratio
+        elif loss_ratio <= 0.90: comm = 0.9945 - loss_ratio
+        elif loss_ratio <= 0.9955: comm = 0.9950 - loss_ratio
+        else: comm = 0
+    elif uy == '2019':
+        if loss_ratio <= 0.75: comm = 0.24
+        elif loss_ratio <= 0.85: comm = 0.9945 - loss_ratio
+        elif loss_ratio <= 0.95: comm = 0.9950 - loss_ratio
+        elif loss_ratio <= 0.9955: comm = 0.9955 - loss_ratio
+        else: comm = 0
+    elif uy == '2018':
+        if loss_ratio <= 0.75: comm = 0.24
+        elif loss_ratio <= 0.85: comm = 0.9945 - loss_ratio
+        elif loss_ratio <= 0.95: comm = 0.9950 - loss_ratio
+        elif loss_ratio <= 0.9955: comm = 0.9955 - loss_ratio
+        else: comm = 0
+    elif uy == '2017':
+        if loss_ratio <= 0.75: comm = 0.24
+        elif loss_ratio <= 0.85: comm = 0.9945 - loss_ratio
+        elif loss_ratio <= 0.95: comm = 0.9950 - loss_ratio
+        elif loss_ratio <= 1.05: comm = 0.9955 - loss_ratio
+        elif loss_ratio <= 1.15: comm = 0.9960 - loss_ratio
+        elif loss_ratio <= 1.25: comm = 1 - loss_ratio
+        else: comm = (1-loss_ratio)*0.6 + 0.1
+    elif uy == '2016':
+        if loss_ratio <= 0.75: comm = 0.24
+        elif loss_ratio <= 0.90: comm = 0.992 - loss_ratio
+        elif loss_ratio <= 1.10: comm = 0.995 - loss_ratio
+        elif loss_ratio <= 1.25: comm = 0.998 - loss_ratio
+        elif loss_ratio <= 1.45: comm = (1-loss_ratio)*0.9
+        else: comm = (1-loss_ratio)*0.6
+    elif uy == '2015':
+        if loss_ratio <= 0.80: comm = 0.18
+        elif loss_ratio <= 0.90: comm = 0.99 - loss_ratio
+        elif loss_ratio <= 1.05: comm = 0.995 - loss_ratio
+        elif loss_ratio <= 1.30: comm = 1.00 - loss_ratio
+        else: comm = 0
+    elif uy == '2014':
+        if loss_ratio <= 0.80: comm = 0.18
+        elif loss_ratio <= 0.90: comm = 0.99 - loss_ratio
+        elif loss_ratio <= 1.05: comm = 0.995 - loss_ratio
+        elif loss_ratio <= 1.30: comm = 1.00 - loss_ratio
+        else: comm = 0
+    else:
+        raise Exception('유효하지 않은 UY입니다.')
+    return comm
+
 
 def get_ret_risk_rate_by_loss_dist(ogl_elp_prm_tty: float, rn_elp_prm_tty: float, ogl_loss_tty: float, rn_loss_tty: float,
     ogl_1yr_elp_prm_tty_boz: float, rn_1yr_elp_prm_tty_boz:float, ogl_1yr_loss_tty_boz: float, rn_1yr_loss_tty_boz: float, loss_ratio: float, cv: float,
@@ -64,6 +114,38 @@ def get_ret_risk_rate_by_risk_coef(boz_cd: str, tty_cd_grp: str, comm: pd.DataFr
         .astype({'RN_ELP_PRM_1YR': float}) \
         .sort_values(by=['TTY_YR'])
     return prem2
+
+# def get_ret_risk_rate_by_risk_coef_c(boz_cd: str, uy: str, prem: pd.DataFrame, loss_ratio: float, rsk_coef: float) -> pd.DataFrame:
+#     comm2 = comm \
+#         .assign(
+#             COMM_RATE_BASE = lambda x: np.fmax(np.fmin(x['CMSN_MULT_RT']*(x['BSE_LSRT']-loss_ratio)+x['CMSN_ADD_RT'], x['TOP_CMSN_RT']), x['LWT_CMSN_RT']),
+#             COMM_RATE_SHOCKED = lambda x: np.fmax(np.fmin(x['CMSN_MULT_RT']*(x['BSE_LSRT']-(1+rsk_coef))+x['CMSN_ADD_RT'], x['TOP_CMSN_RT']), x['LWT_CMSN_RT']),
+#         ) \
+#         [['TTY_YR', 'COMM_RATE_BASE', 'COMM_RATE_SHOCKED', 'CMSN_MULT_RT', 'BSE_LSRT', 'CMSN_ADD_RT', 'TOP_CMSN_RT', 'LWT_CMSN_RT']]
+#     prem2 = prem.merge(comm2, on='TTY_YR', how='left') \
+#         .assign(
+#             BOZ_CD = lambda x: boz_cd,
+#             TTY_CD_GRP = lambda x: tty_cd_grp,
+#             LOSS_RATIO = lambda x: loss_ratio,
+#             RSK_COEF = lambda x: rsk_coef,
+#             SLOPE = lambda x: x['CMSN_MULT_RT'],
+#             A = lambda x: x['BSE_LSRT'],
+#             B = lambda x: x['CMSN_ADD_RT'],
+#             MAX = lambda x: x['TOP_CMSN_RT'],
+#             MIN = lambda x:  x['LWT_CMSN_RT'],
+#             OGL_EXP_LOSS_BASE = lambda x: x['OGL_ELP_PRM_1YR']*loss_ratio,
+#             OGL_EXP_LOSS_SHOCKED = lambda x: x['OGL_ELP_PRM_1YR']*(1+rsk_coef),
+#             OGL_EXP_LOSS_DIFF = lambda x: x['OGL_EXP_LOSS_SHOCKED'] - x['OGL_EXP_LOSS_BASE'],
+#             RET_EXP_LOSS_BASE = lambda x: (x['OGL_ELP_PRM_1YR']-x['RN_ELP_PRM_1YR'])*loss_ratio,
+#             RET_EXP_LOSS_SHOCKED = lambda x: (x['OGL_ELP_PRM_1YR']-x['RN_ELP_PRM_1YR'])*(1+rsk_coef),
+#             RET_EXP_LOSS_DIFF = lambda x: x['RET_EXP_LOSS_SHOCKED'] - x['RET_EXP_LOSS_BASE'],
+#             COMM_BASE = lambda x: x['RN_ELP_PRM_1YR']*x['COMM_RATE_BASE'],
+#             COMM_SHOCKED = lambda x: x['RN_ELP_PRM_1YR']*x['COMM_RATE_SHOCKED'],
+#         ) \
+#         .drop(['COMM_RATE_BASE', 'COMM_RATE_SHOCKED'], axis=1) \
+#         .astype({'RN_ELP_PRM_1YR': float}) \
+#         .sort_values(by=['TTY_YR'])
+#     return prem2
 
 
 def clsf_tty_cd_grp(data: pd.DataFrame) -> pd.Series:
