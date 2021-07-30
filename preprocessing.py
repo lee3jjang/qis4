@@ -246,7 +246,8 @@ def clsf_cntr_catg_cd(data: pd.DataFrame, cntr_grp_info: pd.DataFrame) -> pd.Ser
     catr_catg_cd = data \
         .merge(cntr_grp_info, left_on='NTNL_CTRY_CD', right_on='CNTR_CD', how='left') \
         .assign(CNTR_CATG_CD = lambda x: x['CNTR_CATG_CD'].fillna('#')) \
-        .assign(CNTR_CATG_CD = lambda x: np.where(x['DMFR_DVCD'] == '01', '01', np.where(x['PDC_CD']=='10900', '04', x['CNTR_CATG_CD'])))
+        .assign(CNTR_CATG_CD = lambda x: np.where(x['DMFR_DVCD'] == '01', '국내', np.where(x['PDC_CD']=='10900', '미국&캐나다', x['CNTR_CATG_CD'])))
+        # .assign(CNTR_CATG_CD = lambda x: np.where(x['DMFR_DVCD'] == '01', '01', np.where(x['PDC_CD']=='10900', '04', x['CNTR_CATG_CD'])))
     
     # 전처리 누락여부 검사
     if len(catr_catg_cd.query('CNTR_CATG_CD == "#"')) != 0:
