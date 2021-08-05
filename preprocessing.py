@@ -3,7 +3,7 @@ import pandas as pd
 from typing import Tuple
 from scipy.stats import lognorm
 
-def get_comm_c(uy: str, loss_ratio: float) -> float:
+def _get_comm_c(uy: str, loss_ratio: float) -> float:
     if uy == '2020':
         if loss_ratio <= 0.70: comm = 0.24
         elif loss_ratio <= 0.80: comm = 0.9940 - loss_ratio
@@ -53,6 +53,33 @@ def get_comm_c(uy: str, loss_ratio: float) -> float:
         raise Exception('유효하지 않은 UY입니다.')
     return comm
 
+def get_ret_risk_rate_by_loss_dist_c(ogl_elp_prm_tty: float, rn_elp_prm_tty: float, ogl_loss_tty: float, rn_loss_tty: float,
+    ogl_1yr_elp_prm_tty_boz: float, rn_1yr_elp_prm_tty_boz:float, ogl_1yr_loss_tty_boz: float, rn_1yr_loss_tty_boz: float, loss_ratio: float, cv: float,
+    uy: str) -> Tuple[float, float]:
+    """특약별 보유리스크율(손해율분포법)"""
+
+    # logic
+    mean, std = loss_ratio, loss_ratio*cv
+    mu = 2*np.log(mean)-np.log(mean**2+std**2)/2
+    sigma = (np.log(mean**2+std**2)-2*np.log(mean))**0.5
+    u = (np.arange(1000)+1)/1001
+    ogl_1yr_loss_ratio_tty_boz_sample = lognorm.ppf(u, sigma, loc=0, scale=np.exp(mu))
+
+    ogl_1yr_loss_tty_boz_sample = ogl_1yr_elp_prm_tty_boz*ogl_1yr_loss_ratio_tty_boz_sample
+    ogl_loss_tty_sample = ogl_loss_tty - ogl_1yr_loss_tty_boz + ogl_1yr_loss_tty_boz_sample
+    ogl_exp_loss_tty = ogl_loss_tty_sample.mean()
+    ogl_risk = np.fmax(ogl_loss_tty_sample-ogl_exp_loss_tty, 0)
+
+    ret_rate = (ogl_1yr_elp_prm_tty_boz-rn_1yr_elp_prm_tty_boz)/ogl_1yr_elp_prm_tty_boz
+    ret_loss_tty_sample = (ogl_loss_tty-ogl_1yr_loss_tty_boz)-(rn_loss_tty-rn_1yr_loss_tty_boz)+ogl_1yr_loss_tty_boz_sample*ret_rate
+    rn_loss_ratio_tty_sample = (ogl_loss_tty_sample-ret_loss_tty_sample)/rn_elp_prm_tty
+    comm_tty_sample = rn_elp_prm_tty*np.array(list(map(lambda lr: _get_comm_c(uy, lr), rn_loss_ratio_tty_sample)))
+    ret_cashflow_tty_sample = ret_loss_tty_sample-comm_tty_sample
+    ret_exp_cashflow_tty = ret_cashflow_tty_sample.mean()
+    ret_risk = np.fmax(ret_cashflow_tty_sample-ret_exp_cashflow_tty, 0)
+
+    # return
+    return ogl_risk.mean(), ret_risk.mean()
 
 def get_ret_risk_rate_by_loss_dist(ogl_elp_prm_tty: float, rn_elp_prm_tty: float, ogl_loss_tty: float, rn_loss_tty: float,
     ogl_1yr_elp_prm_tty_boz: float, rn_1yr_elp_prm_tty_boz:float, ogl_1yr_loss_tty_boz: float, rn_1yr_loss_tty_boz: float, loss_ratio: float, cv: float,
@@ -115,38 +142,32 @@ def get_ret_risk_rate_by_risk_coef(boz_cd: str, tty_cd_grp: str, comm: pd.DataFr
         .sort_values(by=['TTY_YR'])
     return prem2
 
-# def get_ret_risk_rate_by_risk_coef_c(boz_cd: str, uy: str, prem: pd.DataFrame, loss_ratio: float, rsk_coef: float) -> pd.DataFrame:
-#     comm2 = comm \
-#         .assign(
-#             COMM_RATE_BASE = lambda x: np.fmax(np.fmin(x['CMSN_MULT_RT']*(x['BSE_LSRT']-loss_ratio)+x['CMSN_ADD_RT'], x['TOP_CMSN_RT']), x['LWT_CMSN_RT']),
-#             COMM_RATE_SHOCKED = lambda x: np.fmax(np.fmin(x['CMSN_MULT_RT']*(x['BSE_LSRT']-(1+rsk_coef))+x['CMSN_ADD_RT'], x['TOP_CMSN_RT']), x['LWT_CMSN_RT']),
-#         ) \
-#         [['TTY_YR', 'COMM_RATE_BASE', 'COMM_RATE_SHOCKED', 'CMSN_MULT_RT', 'BSE_LSRT', 'CMSN_ADD_RT', 'TOP_CMSN_RT', 'LWT_CMSN_RT']]
-#     prem2 = prem.merge(comm2, on='TTY_YR', how='left') \
-#         .assign(
-#             BOZ_CD = lambda x: boz_cd,
-#             TTY_CD_GRP = lambda x: tty_cd_grp,
-#             LOSS_RATIO = lambda x: loss_ratio,
-#             RSK_COEF = lambda x: rsk_coef,
-#             SLOPE = lambda x: x['CMSN_MULT_RT'],
-#             A = lambda x: x['BSE_LSRT'],
-#             B = lambda x: x['CMSN_ADD_RT'],
-#             MAX = lambda x: x['TOP_CMSN_RT'],
-#             MIN = lambda x:  x['LWT_CMSN_RT'],
-#             OGL_EXP_LOSS_BASE = lambda x: x['OGL_ELP_PRM_1YR']*loss_ratio,
-#             OGL_EXP_LOSS_SHOCKED = lambda x: x['OGL_ELP_PRM_1YR']*(1+rsk_coef),
-#             OGL_EXP_LOSS_DIFF = lambda x: x['OGL_EXP_LOSS_SHOCKED'] - x['OGL_EXP_LOSS_BASE'],
-#             RET_EXP_LOSS_BASE = lambda x: (x['OGL_ELP_PRM_1YR']-x['RN_ELP_PRM_1YR'])*loss_ratio,
-#             RET_EXP_LOSS_SHOCKED = lambda x: (x['OGL_ELP_PRM_1YR']-x['RN_ELP_PRM_1YR'])*(1+rsk_coef),
-#             RET_EXP_LOSS_DIFF = lambda x: x['RET_EXP_LOSS_SHOCKED'] - x['RET_EXP_LOSS_BASE'],
-#             COMM_BASE = lambda x: x['RN_ELP_PRM_1YR']*x['COMM_RATE_BASE'],
-#             COMM_SHOCKED = lambda x: x['RN_ELP_PRM_1YR']*x['COMM_RATE_SHOCKED'],
-#         ) \
-#         .drop(['COMM_RATE_BASE', 'COMM_RATE_SHOCKED'], axis=1) \
-#         .astype({'RN_ELP_PRM_1YR': float}) \
-#         .sort_values(by=['TTY_YR'])
-#     return prem2
-
+def get_ret_risk_rate_by_risk_coef_c(boz_cd: str, prem: pd.DataFrame, loss_ratio: float, rsk_coef: float) -> pd.DataFrame:
+    prem2 = prem.assign(
+            COMM_RATE_BASE = lambda x: x['UY'].apply(lambda uy: _get_comm_c(uy, loss_ratio)),
+            COMM_RATE_SHOCKED = lambda x: x['UY'].apply(lambda uy: _get_comm_c(uy, (1+rsk_coef))),
+            BOZ_CD = lambda x: boz_cd,
+            TTY_CD_GRP = lambda x: '자동차보험비례특약',
+            LOSS_RATIO = lambda x: loss_ratio,
+            RSK_COEF = lambda x: rsk_coef,
+            SLOPE = lambda x: '#',
+            A = lambda x: '#',
+            B = lambda x: '#',
+            MAX = lambda x: '#',
+            MIN = lambda x:  '#',
+            OGL_EXP_LOSS_BASE = lambda x: x['OGL_ELP_PRM_1YR']*loss_ratio,
+            OGL_EXP_LOSS_SHOCKED = lambda x: x['OGL_ELP_PRM_1YR']*(1+rsk_coef),
+            OGL_EXP_LOSS_DIFF = lambda x: x['OGL_EXP_LOSS_SHOCKED'] - x['OGL_EXP_LOSS_BASE'],
+            RET_EXP_LOSS_BASE = lambda x: (x['OGL_ELP_PRM_1YR']-x['RN_ELP_PRM_1YR'])*loss_ratio,
+            RET_EXP_LOSS_SHOCKED = lambda x: (x['OGL_ELP_PRM_1YR']-x['RN_ELP_PRM_1YR'])*(1+rsk_coef),
+            RET_EXP_LOSS_DIFF = lambda x: x['RET_EXP_LOSS_SHOCKED'] - x['RET_EXP_LOSS_BASE'],
+            COMM_BASE = lambda x: x['RN_ELP_PRM_1YR']*x['COMM_RATE_BASE'],
+            COMM_SHOCKED = lambda x: x['RN_ELP_PRM_1YR']*x['COMM_RATE_SHOCKED'],
+        ) \
+        .drop(['COMM_RATE_BASE', 'COMM_RATE_SHOCKED'], axis=1) \
+        .astype({'RN_ELP_PRM_1YR': float}) \
+        .sort_values(by=['UY'])
+    return prem2
 
 def clsf_tty_cd_grp(data: pd.DataFrame) -> pd.Series:
     """TTY_CD_GRP 가공
