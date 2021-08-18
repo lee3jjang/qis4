@@ -873,7 +873,7 @@ def clsf_boz_cd(data: pd.DataFrame, prd_info: pd.DataFrame) -> pd.Series:
         .assign(BOZ_CD = lambda x: np.where(x['PDC_CD'] == '10607', 'A008', x['BOZ_CD'])) \
         .assign(BOZ_CD = lambda x: np.where(x['PDC_CD'].isin(['10902', '10903']) & (x.DMFR_DVCD == '01'), 'A009', x['BOZ_CD'])) \
         .assign(BOZ_CD = lambda x: np.where(x['PDC_CD'].isin(['10902', '10903']) & (x.DMFR_DVCD != '01'), 'A010', x['BOZ_CD'])) \
-        .assign(BOZ_CD = lambda x: np.where(x.PDC_CD.isin(['10011', '10013', '10016', '10017', '10580', '10900', '10901']), 'A003', x['BOZ_CD']))
+        .assign(BOZ_CD = lambda x: np.where(x.PDC_CD.isin(['10011', '10012', '10013', '10016', '10017', '10580', '10900', '10901']), 'A003', x['BOZ_CD']))
 
     # 전처리 누락여부 검사
     if len(boz_cd.query('BOZ_CD == "#"')) != 0:
